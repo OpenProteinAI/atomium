@@ -417,7 +417,7 @@ def update_models_list(mmcif_dict, data_dict):
     entities = {
      m["id"]: m["entity_id"] for m in mmcif_dict.get("struct_asym", []) 
     }
-    sequences = make_sequences(mmcif_dict)
+    # sequences = make_sequences(mmcif_dict)
     secondary_structure = make_secondary_structure(mmcif_dict)
     aniso = make_aniso(mmcif_dict)
     model = {"polymer": {}, "non-polymer": {}, "water": {}, "branched": {}}
@@ -549,6 +549,7 @@ def add_sequences_to_polymers(model, mmcif_dict, entities):
     :param dict entities: a mapping of chain IDs to entity IDs."""
 
     sequences = make_sequences(mmcif_dict)
+    # print(sequences)
     for polymer in model["polymer"].values():
         polymer["sequence"] = sequences.get(
          entities.get(polymer["internal_id"], ""), ""
@@ -580,10 +581,35 @@ def make_sequences(mmcif_dict):
     :param dict mmcif_dict: the .mmcif dictionary to read.
     :rtype: ``dict``"""
 
-    return {e["id"]: "".join([
-     CODES.get(res["mon_id"], "X") for res in
-      mmcif_dict.get("entity_poly_seq", []) if res["entity_id"] == e["id"]
-    ]) for e in mmcif_dict.get("entity", []) if e["type"] == "polymer"}
+    polymer_seq_dict = {}
+
+    for entry in mmcif_dict.get("entity", []):
+        if entry["type"] == "polymer":
+            # prefer to parse sequence from the entity_poly field which is required to contain the one letter code
+            # (https://mmcif.wwpdb.org/dictionaries/mmcif_pdbx_v50.dic/Items/_entity_poly.pdbx_seq_one_letter_code.html)
+            if "entity_poly" in mmcif_dict:
+                for entry_poly in mmcif_dict["entity_poly"]:
+                    if entry_poly["entity_id"] == entry["id"]:
+                        # prefer canonical one letter code sequence but fall back on one letter code
+                        canonical = "pdbx_seq_one_letter_code_can"
+                        one_letter = "pdbx_seq_one_letter_code"
+                        if canonical in entry_poly:
+                            s = entry_poly[canonical]
+                        elif one_letter in entry_poly:
+                            s = entry_poly[one_letter]
+                        else:
+                            s = ""
+                        # fix spaces that can be present in s from parsing
+                        s = "".join(s.split())
+            else:
+                # pdbx_seq_one_letter_code is required in entity_poly for mmCIF file deposition so we should never be here
+                # but just in case...
+                s = "".join([CODES.get(res["mon_id"], "X") for res in 
+                                mmcif_dict.get("entity_poly_seq", []) if res["entity_id"] == entry["id"]])
+
+            polymer_seq_dict[entry["id"]] = s
+
+    return polymer_seq_dict
 
 
 def atom_dict_to_atom_dict(d, aniso_dict):
