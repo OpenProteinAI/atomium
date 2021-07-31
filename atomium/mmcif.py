@@ -482,6 +482,7 @@ def add_atom_to_polymer(atom, aniso, model, names):
 
     mol_id = atom["auth_asym_id"]
     res_id = make_residue_id(atom)
+    res_index = get_residue_index(atom)
     try:
         model["polymer"][mol_id]["residues"][res_id]["atoms"][
          int(atom["id"])
@@ -492,7 +493,8 @@ def add_atom_to_polymer(atom, aniso, model, names):
             model["polymer"][mol_id]["residues"][res_id] = {
              "name": name, "full_name": names.get(name),
              "atoms": {int(atom["id"]) : atom_dict_to_atom_dict(atom, aniso)},
-             "number": len(model["polymer"][mol_id]["residues"]) + 1
+             "number": len(model["polymer"][mol_id]["residues"]) + 1,
+             "index": res_index,
             }
         except:
             model["polymer"][mol_id] = {
@@ -500,7 +502,7 @@ def add_atom_to_polymer(atom, aniso, model, names):
              "residues": {res_id: {
               "name": name,
               "atoms": {int(atom["id"]) : atom_dict_to_atom_dict(atom, aniso)},
-              "number": 1, "full_name": names.get(name),
+              "number": 1, "index": res_index, "full_name": names.get(name),
              }}
             }
 
@@ -536,8 +538,27 @@ def make_residue_id(d):
     :param dict d: the atom dictionary to read.
     :rtype: ``str``"""
 
-    insert = "" if d["pdbx_PDB_ins_code"] in "?." else d["pdbx_PDB_ins_code"]
-    return "{}.{}{}".format(d["auth_asym_id"], d["auth_seq_id"], insert)
+    # in MMCIF files, the "auth_seq_id" field is assigned by the authors and is not guaranteed to be positive,
+    # sequential, or unique
+    # "label_seq_id" is a unique identifier of the residue that corresponds to its (1-indexed) index in the
+    # polymer sequence
+    # https://mmcif.wwpdb.org/dictionaries/mmcif_pdbx_v40.dic/Items/_atom_site.label_seq_id.html
+
+    # this is also true for "auth_asym_id" vs "label_asym_id"
+
+    # insert = "" if d["pdbx_PDB_ins_code"] in "?." else d["pdbx_PDB_ins_code"]
+    # return "{}.{}{}".format(d["auth_asym_id"], d["auth_seq_id"], insert)
+    return f"{d['label_asym_id']}.{d['label_seq_id']}"
+
+
+def get_residue_index(d):
+    """Gets the index of the residue in the protein sequence (1-indexed). This is stored in the 'label_seq_id' field.
+    
+    :param dict d: the atom dictionary to read.
+    :rtype: ``int``"""
+
+    index = int(d["label_seq_id"])
+    return index
 
 
 def add_sequences_to_polymers(model, mmcif_dict, entities):

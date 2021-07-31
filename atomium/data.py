@@ -311,7 +311,8 @@ def create_het(d, id, ligand=False, chain=None, water=False):
         return Ligand(*atoms, id=id, name=d["name"], chain=chain,
          internal_id=d["internal_id"], water=water, full_name=d["full_name"])
     else:
-        return Residue(*atoms, id=id, name=d["name"], full_name=d["full_name"])
+        index = d.get('index', d['number'])
+        return Residue(*atoms, id=id, name=d["name"], full_name=d["full_name"], index=index)
 
 
 def atom_dict_to_atom(d, atom_id):

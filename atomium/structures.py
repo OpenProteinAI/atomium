@@ -820,6 +820,7 @@ class Residue(Het, metaclass=StructureClass):
          kwargs.get("full_name"), *atoms)
         self._next, self._previous = None, None
         self._chain = None
+        self.index = kwargs['index']
 
 
     def __repr__(self):
