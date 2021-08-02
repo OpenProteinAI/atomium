@@ -557,7 +557,11 @@ def get_residue_index(d):
     :param dict d: the atom dictionary to read.
     :rtype: ``int``"""
 
-    index = int(d["label_seq_id"])
+    index = d["label_seq_id"]
+    if index != '.':
+        index = int(index)
+    else:
+        index = 0
     return index
 
 
