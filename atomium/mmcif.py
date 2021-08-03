@@ -414,9 +414,13 @@ def update_models_list(mmcif_dict, data_dict):
     types = {e["id"]: e["type"] for e in mmcif_dict.get("entity", {})}
     names = {e["id"]: e["name"] for e in mmcif_dict.get("chem_comp", {})
      if e["mon_nstd_flag"] != "y"}
+
+    # is it better to use the "entity" entries rather than "struct_asym"?
+    # see below for atoms missing from struct_asym that are in entities
     entities = {
      m["id"]: m["entity_id"] for m in mmcif_dict.get("struct_asym", []) 
     }
+
     # sequences = make_sequences(mmcif_dict)
     secondary_structure = make_secondary_structure(mmcif_dict)
     aniso = make_aniso(mmcif_dict)
@@ -427,7 +431,13 @@ def update_models_list(mmcif_dict, data_dict):
             data_dict["models"].append(model)
             model = {"polymer": {}, "non-polymer": {}, "water": {}, "branched": {}}
             model_num = atom["pdbx_PDB_model_num"]
-        mol_type = types[entities[atom["label_asym_id"]]]
+        # sometimes HETATM have new label_asym_id's that aren't in the entities dictionary
+        # because they aren't in the polymer entities header (?)
+        # e.g., see structure 2k9y.cif - in this case the type is water, but this may not always be the case
+        asym_id = atom["label_asym_id"]
+        mol_type = "water" # default to water for things missing from entitities
+        if asym_id in entities:
+            mol_type = types[entities[asym_id]]
         if mol_type == "polymer" or mol_type == "branched":
             add_atom_to_polymer(atom, aniso, model, names)
         else:
