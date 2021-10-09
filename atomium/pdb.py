@@ -533,10 +533,6 @@ def atom_line_to_dict(line, aniso_dict):
     if line[54:60].strip(): a["occupancy"] = float(line[54:60].strip())
     if line[60:66].strip(): a["bvalue"] = float(line[60:66].strip())
     a["element"] = line[76:78].strip() or None
-    if line[78:80].strip():
-        try:
-            a["charge"] = int(line[78:80].strip())
-        except: a["charge"] = int(line[78:80][::-1].strip())
     return a
 
 
